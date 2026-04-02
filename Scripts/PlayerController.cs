@@ -39,37 +39,37 @@ public class PlayerController : MonoBehaviour
     public int lootValue;
     private int lootCount;
 
-    [SerializeField]
+    [SerializeField] //for attack animations
     private GameObject hitBox;
 
 
     void Start()
     {
-        //transform.position = new Vector2(startCoordinateX, startCoordinateY);
+        //transform.position = new Vector2(startCoordinateX, startCoordinateY); //sometimes necessary for going into new scenes
         myRigidBody = GetComponent<Rigidbody2D>();
         theLevelManager = FindObjectOfType<LevelManager>();
         anim = GetComponent<Animator>();
-        currentHealth = maxHealth;
+        currentHealth = maxHealth; //make sure to set health back to full
     }
 
     private void Update()
     {
         Debug.Log(Input.GetAxisRaw("Horizontal"));
         Debug.Log(Input.GetAxisRaw("Vertical"));
-        Animate();
+        Animate(); //call this to make sure animations are correct
 
-        if (Input.GetButtonDown("Jump") && canMove)
+        if (Input.GetButtonDown("Jump") && canMove) //I can rename "jump," that's just the default spacebar command. Pressing it here results in the attack animation
         {
             isAttacking = true;
-            myRigidBody.velocity = new Vector2(0, 0);
-            StartCoroutine(AttackDelay(delay));
+            myRigidBody.velocity = new Vector2(0, 0); //stop movement/velocity or whatever
+            StartCoroutine(AttackDelay(delay)); //halt other things until attack is finished
         }
         
     }
 
     private void FixedUpdate()
     {
-        //this system allows old-school 8-directional movement
+        //this system allows 8-directional movement
         if (canMove)
         {
             if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D))
@@ -101,15 +101,16 @@ public class PlayerController : MonoBehaviour
         //Health
         if (currentHealth > maxHealth)
         {
-            currentHealth = maxHealth;
+            currentHealth = maxHealth; //don't let health go over full; mostly necessary if there are healing items
         }
         if (currentHealth <= 0)
         {
-            //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-            currentHealth = maxHealth;
-            transform.position = new Vector2(startCoordinateX, startCoordinateY);
+            //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); //reload scene. This is commented out because in this project the scene isn't fully reset
+            currentHealth = maxHealth; //resets player health; needs to be called because the scene is reloading and Start() isn't being called again
+            transform.position = new Vector2(startCoordinateX, startCoordinateY); //go back to start position
         }
 
+        //attempted knockback logic
         /*if (knockbackCount <= 0)
             // Player moving right
             if (Input.GetAxisRaw("Horizontal") > 0f)
@@ -143,8 +144,8 @@ public class PlayerController : MonoBehaviour
     //mid-attack controls
     IEnumerator AttackDelay(float delay)
     {
-        canMove = false;
-        yield return new WaitForSeconds(delay);
+        canMove = false; //make sure player can't move
+        yield return new WaitForSeconds(delay); //wait; "delay" is the variable, can be changed depending on length of animation
         canMove = true;
         isAttacking = false;
     }
@@ -154,37 +155,38 @@ public class PlayerController : MonoBehaviour
         if (other.tag == "Loot")
         {
             theLevelManager.AddLoot(lootValue);
-            Destroy(other.gameObject);
+            Destroy(other.gameObject); //destroy the loot
         }
     }
 
     //animation system
     void Animate()
     {
-        if ((Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0) && canMove)
+        if ((Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0) && canMove) //if the movement key(s) is/are being pressed and canMove
         {
             isMoving = true;
         }
-        else
+        else //just to make sure
         {
             isMoving = false;
         }
         if (isMoving)
         {
-            anim.SetFloat("X", Input.GetAxisRaw("Horizontal"));
-            anim.SetFloat("Y", Input.GetAxisRaw("Vertical"));
+            anim.SetFloat("X", Input.GetAxisRaw("Horizontal")); //these values go to the animator, which has logic that determines which animation to play...
+            anim.SetFloat("Y", Input.GetAxisRaw("Vertical")); //...depending on the x and y values of the input
         }
 
         if (isAttacking)
         {
             //canMove= false;
-            anim.SetFloat("lastMoveX", lastMoveX);
-            anim.SetFloat("lastMoveY", lastMoveY);
+            anim.SetFloat("lastMoveX", lastMoveX); //...lastMoveX/Y determine which way the player was facing before the attack key is pressed
+            anim.SetFloat("lastMoveY", lastMoveY); //once again, the animator tool in Unity takes care of the logic once the values are passed
         }
-        else
+        /*else
         {
             //canMove = true;
-        }
+        }*/
+        //send values to the animator to satisfy the conditions for playing animations
         anim.SetBool("isAttacking", isAttacking);
         anim.SetBool("isMoving", isMoving);
     }
@@ -192,10 +194,9 @@ public class PlayerController : MonoBehaviour
     //for the damage script
     public void Damage(int dmg)
     {
-        currentHealth -= dmg;
-        //canMove = false;
-
-        //gameObject.GetComponent<Animation>().Play("Scott_redflash");
+        currentHealth -= dmg; //simple
+        //canMove = false; //possibly necessary later for a knockback sequence
+        //gameObject.GetComponent<Animation>().Play("Scott_redflash"); //a simple color-strobing animation that hasn't been implemented yet
     }
 
     public bool getAttacking()
@@ -212,7 +213,7 @@ public class PlayerController : MonoBehaviour
     {
         lootCount += lootValue;
     }
-    public void subtractFromLoot(int cost)
+    public void subtractFromLoot(int cost) //for when loot needs to be taken away
     {
         lootCount -= cost;
     }
