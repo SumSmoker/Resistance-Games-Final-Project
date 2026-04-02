@@ -13,11 +13,7 @@ public class EnemyFollow : MonoBehaviour
         GameObject playerObject = GameObject.FindWithTag("Player");
         if(playerObject != null)
         {
-            playerTarget = playerObject.transform;//GetComponent<Transform>();
-        }
-        else
-        {
-            Debug.LogError("Player gameObject not found.");
+            playerTarget = playerObject.transform;
         }
     }
 
@@ -26,8 +22,7 @@ public class EnemyFollow : MonoBehaviour
     {
         if(playerTarget != null)
         {
-            //moves the scriptholder's position towards the player position
-            transform.position = Vector3.MoveTowards(transform.position, playerTarget.position, moveSpeed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, playerTarget.position, moveSpeed * Time.deltaTime); //moves the scriptholder's position towards the player position
         }
 
     }
