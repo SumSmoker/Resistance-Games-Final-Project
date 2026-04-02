@@ -6,7 +6,7 @@ public class DontDestroyPlease : MonoBehaviour
 {
 
     private static GameObject[] persistentObjects = new GameObject[1]; //this is a hard-coded number, increase it depending on how many items need to be fit in
-    public int objectIndex;
+    public int objectIndex; //the object's index in the "persistantObjects" array
 
     void Awake()
     {
