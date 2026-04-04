@@ -42,12 +42,19 @@ public class PlayerController : MonoBehaviour
     [SerializeField] //for attack animations
     private GameObject hitBox;
 
+    // Variables for invincibility (I-frames)
+    public float invincibilityLength = 1f; // How long the invincibility lasts
+    public float invincibilityCounter; // Current timer value
+    private SpriteRenderer sr; // Flashing animation for invincibility
+
 
     void Start()
     {
         myRigidBody = GetComponent<Rigidbody2D>();
         theLevelManager = FindObjectOfType<LevelManager>();
         anim = GetComponent<Animator>();
+        // Get the SpriteRenderer component to control visibility for flashing
+        sr = GetComponent<SpriteRenderer>();
         currentHealth = maxHealth; //make sure to set health back to full
         if(SceneManager.GetActiveScene().buildIndex == 0)
         {
@@ -64,6 +71,27 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        // --- UPDATED VISUAL LOGIC ---
+        if (invincibilityCounter > 0)
+        {
+            invincibilityCounter -= Time.deltaTime;
+
+            // Simple flashing: Toggle sprite visibility rapidly based on a sine wave over time
+            if (Mathf.Sin(Time.time * 25f) > 0f)
+            {
+                sr.enabled = true; // Show sprite
+            }
+            else
+            {
+                sr.enabled = false; // Hide sprite
+            }
+        }
+        else
+        {
+            // Ensure sprite is definitely visible when invincibility ends
+            sr.enabled = true;
+        }
+
         Debug.Log(Input.GetAxisRaw("Horizontal"));
         Debug.Log(Input.GetAxisRaw("Vertical"));
         Animate(); //call this to make sure animations are correct
@@ -204,9 +232,18 @@ public class PlayerController : MonoBehaviour
     //for the damage script
     public void Damage(int dmg)
     {
-        currentHealth -= dmg; //simple
-        //canMove = false; //possibly necessary later for a knockback sequence
-        //gameObject.GetComponent<Animation>().Play("Scott_redflash"); //a simple color-strobing animation that hasn't been implemented yet
+        // --- ADD THIS CONDITION ---
+        // Check if the player is currently vulnerable
+        if (invincibilityCounter <= 0)
+        {
+            currentHealth -= dmg; //simple
+            //canMove = false; //possibly necessary later for a knockback sequence
+            //gameObject.GetComponent<Animation>().Play("Scott_redflash"); //a simple color-strobing animation that hasn't been implemented yet
+
+            // --- START THE TIMER ---
+            // Reset the invincibility timer (Start I-frames)
+            invincibilityCounter = invincibilityLength;
+        }
     }
 
     public bool getAttacking()
