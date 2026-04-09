@@ -27,6 +27,7 @@ public class PlayerController : MonoBehaviour
     public float knockbackLength; //how long we get pushed back
     public float knockbackCount;
     public bool knockFromRight;
+    private Vector2 knockbackDirection; //NEW: stores the direction of the knockback
 
     //animation values
     public Animator anim;
@@ -108,7 +109,13 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         //this system allows 8-directional movement
-        if (canMove)
+        //NEW: if knockback is active, temporarily override normal movement
+        if (knockbackCount > 0)
+        {
+            myRigidBody.velocity = knockbackDirection * knockback;
+            knockbackCount -= Time.fixedDeltaTime;
+        }
+        else if (canMove)
         {
             if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D))
             {
@@ -134,6 +141,10 @@ public class PlayerController : MonoBehaviour
             {
                 myRigidBody.velocity = new Vector2(0, 0);
             }
+        }
+        else
+        {
+            myRigidBody.velocity = new Vector2(0, 0);
         }
 
         //Health
@@ -230,7 +241,7 @@ public class PlayerController : MonoBehaviour
     }
 
     //for the damage script
-    public void Damage(int dmg)
+    public bool Damage(int dmg)
     {
         // --- ADD THIS CONDITION ---
         // Check if the player is currently vulnerable
@@ -243,7 +254,24 @@ public class PlayerController : MonoBehaviour
             // --- START THE TIMER ---
             // Reset the invincibility timer (Start I-frames)
             invincibilityCounter = invincibilityLength;
+            return true; //NEW: damage was applied successfully
         }
+
+        return false; //NEW: player is still invincible, so no damage was taken
+    }
+
+    //NEW: applies knockback away from the source of damage
+    public void ApplyKnockback(Vector2 sourcePosition)
+    {
+        knockbackDirection = ((Vector2)transform.position - sourcePosition).normalized;
+
+        //NEW: safety check in case positions overlap exactly
+        if (knockbackDirection == Vector2.zero)
+        {
+            knockbackDirection = Vector2.up;
+        }
+
+        knockbackCount = knockbackLength;
     }
 
     public bool getAttacking()
