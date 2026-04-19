@@ -21,6 +21,7 @@ public class Damage : MonoBehaviour
 
     private LevelManager theLevelManager; //for communication with kill count
 
+
     // Start is called before the first frame update
     void Start()
     {
@@ -55,21 +56,12 @@ public class Damage : MonoBehaviour
         //use else if to make sure player's hitbox is prioritized over their hurtbox
         else if (other.CompareTag("Player"))
         {
-                player.Damage(damage); //deals damage
+            //deal damage first; only apply knockback if the player actually took damage
+            if (player.Damage(damage))
+            {
+                player.ApplyKnockback(transform.position);
+            }
+        }
 
-                player.knockbackCount = player.knockbackLength;
-                player.knockbackCount++;
-
-                //determines left/right orientation
-                if (other.transform.position.x < transform.position.x)
-                {
-                    player.knockFromRight = true;
-                }
-                else
-                {
-                    player.knockFromRight = false;
-                }
-         }
-            
     } 
  }
