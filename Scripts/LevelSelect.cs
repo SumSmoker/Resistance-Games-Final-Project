@@ -3,20 +3,24 @@ using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 
+//attach this script to the Main Camera that is a child of the Player Character
+
 public class LevelSelect : MonoBehaviour
 {
     private PlayerController playerController; //create this reference to manipulate when the player can move
 
     void Start()
     {
+        
         playerController = GameObject.Find("PlayerCharacter").GetComponent<PlayerController>(); //initialize in a start method for everything that requires it
-        playerController.canMove = false; //disable movement
-        playerController.GetComponent<SpriteRenderer>().enabled = false; //disable sprite renderer
+        playerController.setActive(false);
     }
 
     public void startRun()
     {
         //later, we'll have the conditional: "if player loot is greater than required loot, load game scene"
-        SceneManager.LoadScene(1);
+        playerController.sceneTransition(true);
+        playerController.setActive(true);
+        SceneManager.LoadScene("SampleScene");
     }
 }
