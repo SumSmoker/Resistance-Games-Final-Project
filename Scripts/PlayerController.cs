@@ -10,6 +10,7 @@ public class PlayerController : MonoBehaviour
     //basic values
     public float moveSpeed;
     private Rigidbody2D myRigidBody;
+    private BoxCollider2D myBoxCollider2D;
     public bool canMove;
     public float delay = 0.5f;
     public int maxHealth;
@@ -38,7 +39,8 @@ public class PlayerController : MonoBehaviour
 
     //loot values
     public int lootValue;
-    private int lootCount;
+    [SerializeField]
+    private int wallet;
 
     [SerializeField] //for attack animations
     private GameObject hitBox;
@@ -48,30 +50,27 @@ public class PlayerController : MonoBehaviour
     public float invincibilityCounter; // Current timer value
     private SpriteRenderer sr; // Flashing animation for invincibility
 
-
     void Start()
     {
+
+    }
+
+    private void OnEnable()
+    {
         myRigidBody = GetComponent<Rigidbody2D>();
-        theLevelManager = FindObjectOfType<LevelManager>();
+        myBoxCollider2D = GetComponent<BoxCollider2D>();
         anim = GetComponent<Animator>();
-        // Get the SpriteRenderer component to control visibility for flashing
-        sr = GetComponent<SpriteRenderer>();
+        sr = GetComponent<SpriteRenderer>(); // Get the SpriteRenderer component to control visibility for flashing
         currentHealth = maxHealth; //make sure to set health back to full
-        if(SceneManager.GetActiveScene().buildIndex == 0)
-        {
-            canMove = false;
-            GetComponent<SpriteRenderer>().enabled = false;
-        }
-        else if(SceneManager.GetActiveScene().buildIndex != 0)
-        {
-            canMove = true;
-            GetComponent<SpriteRenderer>().enabled = true;
-            transform.position = new Vector2(startCoordinateX, startCoordinateY); //sometimes necessary for going into new scenes
-        }
     }
 
     private void Update()
     {
+        if(theLevelManager == null)
+        {
+            theLevelManager = FindObjectOfType<LevelManager>();
+        }
+
         // --- UPDATED VISUAL LOGIC ---
         if (invincibilityCounter > 0)
         {
@@ -103,18 +102,17 @@ public class PlayerController : MonoBehaviour
             myRigidBody.velocity = new Vector2(0, 0); //stop movement/velocity or whatever
             StartCoroutine(AttackDelay(delay)); //halt other things until attack is finished
         }
-        
     }
 
     private void FixedUpdate()
     {
-        //this system allows 8-directional movement
         //NEW: if knockback is active, temporarily override normal movement
         if (knockbackCount > 0)
         {
             myRigidBody.velocity = knockbackDirection * knockback;
             knockbackCount -= Time.fixedDeltaTime;
         }
+        //this system allows 8-directional movement
         else if (canMove)
         {
             if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D))
@@ -154,47 +152,16 @@ public class PlayerController : MonoBehaviour
         }
         if (currentHealth <= 0)
         {
-            //SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); //reload scene. This is commented out because in this project the scene isn't fully reset
             currentHealth = maxHealth; //resets player health; needs to be called because the scene is reloading and Start() isn't being called again
-            transform.position = new Vector2(startCoordinateX, startCoordinateY); //go back to start position
+            sceneTransition(true);//transform.position = new Vector2(startCoordinateX, startCoordinateY); //go back to start position
         }
-
-        //attempted knockback logic
-        /*if (knockbackCount <= 0)
-            // Player moving right
-            if (Input.GetAxisRaw("Horizontal") > 0f)
-            {
-                myRigidBody.velocity = new Vector2(moveSpeed, myRigidBody.velocity.y);
-                transform.localScale = new Vector2(1f, 1f);
-            }
-            // Player moving left
-            else if (Input.GetAxisRaw("Horizontal") < 0f)
-            {
-                myRigidBody.velocity = new Vector2(-moveSpeed, myRigidBody.velocity.y);
-                transform.localScale = new Vector2(-1f, 1f);
-            }
-            // No slide
-            else
-            {
-                myRigidBody.velocity = new Vector2(0f, myRigidBody.velocity.y);
-            }
-        //knockback
-        else
-        {
-            if (knockFromRight)
-                myRigidBody.velocity = new Vector2(-knockback, knockback);
-            if (!knockFromRight)
-                myRigidBody.velocity = new Vector2(knockback, knockback);
-            knockbackCount -= Time.deltaTime;
-        }*/
-
     }
 
     //mid-attack controls
     IEnumerator AttackDelay(float delay)
     {
         canMove = false; //make sure player can't move
-        yield return new WaitForSeconds(delay); //wait; "delay" is the variable, can be changed depending on length of animation
+        yield return new WaitForSeconds(delay); //"delay" is the variable, can be changed depending on length of animation
         canMove = true;
         isAttacking = false;
     }
@@ -231,10 +198,7 @@ public class PlayerController : MonoBehaviour
             anim.SetFloat("lastMoveX", lastMoveX); //...lastMoveX/Y determine which way the player was facing before the attack key is pressed
             anim.SetFloat("lastMoveY", lastMoveY); //once again, the animator tool in Unity takes care of the logic once the values are passed
         }
-        /*else
-        {
-            //canMove = true;
-        }*/
+
         //send values to the animator to satisfy the conditions for playing animations
         anim.SetBool("isAttacking", isAttacking);
         anim.SetBool("isMoving", isMoving);
@@ -248,15 +212,12 @@ public class PlayerController : MonoBehaviour
         if (invincibilityCounter <= 0)
         {
             currentHealth -= dmg; //simple
-            //canMove = false; //possibly necessary later for a knockback sequence
-            //gameObject.GetComponent<Animation>().Play("Scott_redflash"); //a simple color-strobing animation that hasn't been implemented yet
 
             // --- START THE TIMER ---
             // Reset the invincibility timer (Start I-frames)
             invincibilityCounter = invincibilityLength;
             return true; //NEW: damage was applied successfully
         }
-
         return false; //NEW: player is still invincible, so no damage was taken
     }
 
@@ -286,11 +247,11 @@ public class PlayerController : MonoBehaviour
 
     public void addToLoot(int lootValue)
     {
-        lootCount += lootValue;
+        wallet += lootValue;
     }
     public void subtractFromLoot(int cost) //for when loot needs to be taken away
     {
-        lootCount -= cost;
+        wallet -= cost;
     }
 
     public int getX()
@@ -301,6 +262,33 @@ public class PlayerController : MonoBehaviour
     public int getY()
     {
         return (int)transform.position.y;
+    }
+
+    public void setActive(bool active)
+    {
+        gameObject.SetActive(active);
+    }
+
+    //reference in the LevelManager to reset the PlayerCharacter position after changing scenes
+    public void setPosition(int x, int y)
+    {
+        gameObject.transform.position = new Vector2(x, y);
+    }
+
+    //referenced in the LevelManager to allow the PlayerCharacter to move after changing scenes
+    public void setMoving(bool moving)
+    {
+        canMove = moving;
+    }
+
+    public void sceneTransition(bool visible)
+    {
+        //gameObject.SetActive(visible);
+        gameObject.transform.position = new Vector2(0, 0);
+        canMove = visible;
+        currentHealth = maxHealth;
+        knockbackCount = 0;
+        invincibilityCounter = 0;
     }
 
 }
