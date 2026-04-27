@@ -68,6 +68,9 @@ public class PlayerController : MonoBehaviour
     public bool frameRateIsGood;
     public bool fullColor;
 
+    // Add the Singleton instance and loot multiplier from Max's code
+    public static PlayerController instance;
+
     void Start()
     {
         myRigidBody = GetComponent<Rigidbody2D>();
@@ -163,6 +166,10 @@ public class PlayerController : MonoBehaviour
                 lastMoveX = Input.GetAxisRaw("Horizontal");
                 lastMoveY = Input.GetAxisRaw("Vertical");
             }
+            else
+            {
+                myRigidBody.velocity = new Vector2(0, 0);
+            }
         }
         else
         {
@@ -177,8 +184,8 @@ public class PlayerController : MonoBehaviour
         }
         if (currentHealth <= 0)
         {
+            currentHealth = maxHealth;
             HandleDeath();
-            
         }
     }
 
@@ -197,15 +204,6 @@ public class PlayerController : MonoBehaviour
         yield return new WaitForSeconds(delay); //"delay" is the variable, can be changed depending on length of animation
         canMove = true;
         isAttacking = false;
-    }
-
-    void OnTriggerEnter2D(Collider2D other)
-    {
-        if (other.tag == "Loot")
-        {
-            theLevelManager.AddLoot(lootValue);
-            Destroy(other.gameObject); //destroy the loot
-        }
     }
 
     //animation system
@@ -333,11 +331,6 @@ public class PlayerController : MonoBehaviour
         // Now we apply the loot multiplier (for the upgrades)
         coins += Mathf.RoundToInt(amount * lootMultiplier);
         Debug.Log("Coins updated! Total: " + coins);
-
-        if (theLevelManager != null)
-        {
-            theLevelManager.AddLoot(Mathf.RoundToInt(amount * lootMultiplier));
-        }
     }
 
     public void Heal(int healAmount)
@@ -402,4 +395,21 @@ public class PlayerController : MonoBehaviour
         invincibilityCounter = 0;
     }
 
+    private void Awake()
+    {
+        // Make the player a Singleton so Max's scripts can find it easily
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject); // Keep the player between scenes
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        myRigidBody = GetComponent<Rigidbody2D>();
+        sr = GetComponent<SpriteRenderer>();
+    }
 }
