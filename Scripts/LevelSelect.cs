@@ -46,7 +46,7 @@ public class LevelSelect : MonoBehaviour
         grayscaleEffect = GameObject.Find("PlayerCharacter").GetComponentInChildren<GrayscaleEffect>();
         runCost = (int)(runCost * inflation);
         //set up UI text and keep it updated
-        walletText.text = "" + playerController.getWallet();
+        walletText.text = "" + playerController.coins;
         runText.text = "" + playerController.runCount;
         if (freeTrial - playerController.runCount > 0)
         {
@@ -54,7 +54,7 @@ public class LevelSelect : MonoBehaviour
         }
         else
         {
-            runCost = runCost * inflation;
+            runCost = runCost * playerController.runCount;
         }
         costText.text = "" + runCost;
         if (playerController.fullColor)
@@ -75,12 +75,12 @@ public class LevelSelect : MonoBehaviour
             playerController.addToRun(1);
             SceneManager.LoadScene("SampleScene");
         }
-        else if (playerController.getWallet() - runCost >= 0) //if the player's wallet - run cost is >= 0
+        else if (playerController.coins - runCost >= 0) //if the player's wallet - run cost is >= 0
         {
             //start the level, or activate the button
             playerController.sceneReset();
             playerController.addToRun(1);
-            playerController.subtractFromLoot(runCost);
+            playerController.spendMoney((int)runCost);
             SceneManager.LoadScene("SampleScene");
         }
         
@@ -91,16 +91,16 @@ public class LevelSelect : MonoBehaviour
         
         if (playerController.fullColor)
         {
-            playerController.addToLoot(colorPayout);
+            playerController.AddCoins(colorPayout);
             playerController.changeColor(!playerController.fullColor);
-            walletText.text = "" + playerController.getWallet();
+            walletText.text = "" + playerController.coins;
             colorText.text = "Buy: -" + colorCost;
         }
-        else if(!playerController.fullColor && playerController.getWallet() - colorCost >= 0)
+        else if(!playerController.fullColor && playerController.coins - colorCost >= 0)
         {
-            playerController.subtractFromLoot(colorCost);
+            playerController.spendMoney(colorCost);
             playerController.changeColor(!playerController.fullColor);
-            walletText.text = "" + playerController.getWallet();
+            walletText.text = "" + playerController.coins;
             colorText.text = "Sell: +" + colorPayout;
         }
     }
@@ -109,15 +109,15 @@ public class LevelSelect : MonoBehaviour
     {
         if (playerController.frameRateIsGood)
         {
-            playerController.addToLoot(frameRatePayout);
+            playerController.AddCoins(frameRatePayout);
             Application.targetFrameRate = badFrameRate;
             playerController.changeFrameRateGood(false);
-            walletText.text = "" + playerController.getWallet();
+            walletText.text = "" + playerController.coins;
             //GetComponentInChildren<TextMeshProUGUI>().text = "Buy";
         }
-        else if (playerController.getWallet() - frameRateCost >= 0)
+        else if (playerController.coins - frameRateCost >= 0)
         {
-            playerController.subtractFromLoot(frameRateCost);
+            playerController.AddCoins(frameRateCost);
             Application.targetFrameRate = goodFrameRate;
             playerController.changeFrameRateGood(true);
         }
