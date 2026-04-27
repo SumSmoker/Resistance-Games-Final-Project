@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using UnityEngine.UIElements;
 using static Unity.VisualScripting.Member;
 
 public class PlayerController : MonoBehaviour
@@ -12,7 +13,8 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D myRigidBody;
     private BoxCollider2D myBoxCollider2D;
     public bool canMove;
-    public float delay = 0.5f;
+    public float attackDelay;
+    public float deathDelay; 
     public int maxHealth;
     public int currentHealth;
     public int damage;
@@ -22,12 +24,14 @@ public class PlayerController : MonoBehaviour
     private int startCoordinateY;
 
     private LevelManager theLevelManager;
+    [SerializeField]
+    private GameObject deathCanvas;
+    private Color tmp;
 
     //knockback values
     public float knockback; //power
     public float knockbackLength; //how long we get pushed back
     public float knockbackCount;
-    public bool knockFromRight;
     private Vector2 knockbackDirection; //NEW: stores the direction of the knockback
 
     //animation values
@@ -36,11 +40,14 @@ public class PlayerController : MonoBehaviour
     public bool isAttacking;
     private float lastMoveX;
     private float lastMoveY;
+    public bool isDead;
 
     //loot values
     public int lootValue;
     [SerializeField]
     private int wallet;
+
+    public int runCount; //keep track of runs
 
     [SerializeField] //for attack animations
     private GameObject hitBox;
@@ -50,12 +57,18 @@ public class PlayerController : MonoBehaviour
     public float invincibilityCounter; // Current timer value
     private SpriteRenderer sr; // Flashing animation for invincibility
 
+    // Variables to store base stats
+    private float baseSpeed;
+    private int baseDamage;
+    public int attackDamage = 10;
+    public int coins = 0;
+    public float lootMultiplier = 1f;
+
+    //performance values
+    public bool frameRateIsGood;
+    public bool fullColor;
+
     void Start()
-    {
-
-    }
-
-    private void OnEnable()
     {
         myRigidBody = GetComponent<Rigidbody2D>();
         myBoxCollider2D = GetComponent<BoxCollider2D>();
@@ -66,9 +79,28 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if(theLevelManager == null)
+        Debug.Log(Input.GetAxisRaw("Horizontal"));
+        Debug.Log(Input.GetAxisRaw("Vertical"));
+        Animate(); //call this to make sure animations are correct
+
+        if (theLevelManager == null)
         {
             theLevelManager = FindObjectOfType<LevelManager>();
+        }
+        if (SceneManager.GetActiveScene().name == "LevelSelect")
+        {
+            tmp = sr.color;
+            tmp.a = 0;
+            sr.color = tmp;
+        }
+        else if (SceneManager.GetActiveScene().name == "SampleScene")
+        {
+            sr.color = Color.white;
+        }
+        if (deathCanvas == null)
+        {
+            deathCanvas = GameObject.Find("DeathHaze");
+            deathCanvas.SetActive(false);
         }
 
         // --- UPDATED VISUAL LOGIC ---
@@ -92,15 +124,11 @@ public class PlayerController : MonoBehaviour
             sr.enabled = true;
         }
 
-        Debug.Log(Input.GetAxisRaw("Horizontal"));
-        Debug.Log(Input.GetAxisRaw("Vertical"));
-        Animate(); //call this to make sure animations are correct
-
         if (Input.GetButtonDown("Jump") && canMove) //I can rename "jump," that's just the default spacebar command. Pressing it here results in the attack animation
         {
             isAttacking = true;
             myRigidBody.velocity = new Vector2(0, 0); //stop movement/velocity or whatever
-            StartCoroutine(AttackDelay(delay)); //halt other things until attack is finished
+            StartCoroutine(AttackDelay(attackDelay)); //halt other things until attack is finished
         }
     }
 
@@ -135,10 +163,6 @@ public class PlayerController : MonoBehaviour
                 lastMoveX = Input.GetAxisRaw("Horizontal");
                 lastMoveY = Input.GetAxisRaw("Vertical");
             }
-            else
-            {
-                myRigidBody.velocity = new Vector2(0, 0);
-            }
         }
         else
         {
@@ -149,12 +173,21 @@ public class PlayerController : MonoBehaviour
         if (currentHealth > maxHealth)
         {
             currentHealth = maxHealth; //don't let health go over full; mostly necessary if there are healing items
+            isDead = false; //make sure to reset
         }
         if (currentHealth <= 0)
         {
-            currentHealth = maxHealth; //resets player health; needs to be called because the scene is reloading and Start() isn't being called again
-            sceneTransition(true);//transform.position = new Vector2(startCoordinateX, startCoordinateY); //go back to start position
+            HandleDeath();
+            
         }
+    }
+
+    IEnumerator DeathDelay(float delay)
+    {
+        deathCanvas.SetActive(true);
+        yield return new WaitForSeconds(delay);
+        deathCanvas.SetActive(false);
+        sceneReset();
     }
 
     //mid-attack controls
@@ -202,6 +235,7 @@ public class PlayerController : MonoBehaviour
         //send values to the animator to satisfy the conditions for playing animations
         anim.SetBool("isAttacking", isAttacking);
         anim.SetBool("isMoving", isMoving);
+        anim.SetBool("isDead", isDead);
     }
 
     //for the damage script
@@ -244,16 +278,6 @@ public class PlayerController : MonoBehaviour
     {
         return damage;
     }
-
-    public void addToLoot(int lootValue)
-    {
-        wallet += lootValue;
-    }
-    public void subtractFromLoot(int cost) //for when loot needs to be taken away
-    {
-        wallet -= cost;
-    }
-
     public int getX()
     {
         return (int)transform.position.x;
@@ -281,12 +305,99 @@ public class PlayerController : MonoBehaviour
         canMove = moving;
     }
 
-    public void sceneTransition(bool visible)
+    public void addToRun(int add)
     {
-        //gameObject.SetActive(visible);
-        gameObject.transform.position = new Vector2(0, 0);
-        canMove = visible;
+        runCount += add;
+    }
+
+    public void changeFrameRateGood(bool changer)
+    {
+        frameRateIsGood = changer;
+    }
+    
+    public void changeColor(bool changer)
+    {
+        fullColor = changer;
+    }
+    public void HandleDeath()
+    {
+        if (isDead) return;
+
+        isDead = true;
+        canMove = false;
+        StartCoroutine(DeathDelay(deathDelay));
+    }
+
+    public void AddCoins(int amount)
+    {
+        // Now we apply the loot multiplier (for the upgrades)
+        coins += Mathf.RoundToInt(amount * lootMultiplier);
+        Debug.Log("Coins updated! Total: " + coins);
+
+        if (theLevelManager != null)
+        {
+            theLevelManager.AddLoot(Mathf.RoundToInt(amount * lootMultiplier));
+        }
+    }
+
+    public void Heal(int healAmount)
+    {
+        // Assuming you have currentHealth and maxHealth variables
+        currentHealth += healAmount;
+        if (currentHealth > maxHealth) currentHealth = maxHealth;
+        Debug.Log("Healed! Current HP: " + currentHealth);
+    }
+
+    public void ApplySpeedBoost(float multiplier, float duration)
+    {
+        StartCoroutine(SpeedBoostRoutine(multiplier, duration));
+    }
+
+    private IEnumerator SpeedBoostRoutine(float multiplier, float duration)
+    {
+        moveSpeed = baseSpeed * multiplier; // Increase speed (e.g., x1.5)
+        Debug.Log("Speed Boost Active!");
+
+        yield return new WaitForSeconds(duration);
+
+        moveSpeed = baseSpeed; // Revert to original speed
+        Debug.Log("Speed Boost Ended!");
+    }
+
+    // This function is required by Max's scripts (LevelSelect and UpgradeManager) to spend money
+    public bool spendMoney(int amount)
+    {
+        if (coins >= amount)
+        {
+            coins -= amount;
+            return true; // Money successfully spent
+        }
+        return false; // Not enough money
+    }
+
+    public void ApplyDamageBoost(int extraDamage, float duration)
+    {
+        StartCoroutine(DamageBoostRoutine(extraDamage, duration));
+    }
+
+    private IEnumerator DamageBoostRoutine(int extraDamage, float duration)
+    {
+        attackDamage = baseDamage + extraDamage; // Add bonus damage
+        Debug.Log("Damage Boost Active! Attack: " + attackDamage);
+
+        yield return new WaitForSeconds(duration); // Wait for the buff to expire
+
+        attackDamage = baseDamage; // Revert to original damage
+        Debug.Log("Damage Boost Ended! Attack: " + attackDamage);
+    }
+
+    public void sceneReset()
+    {
         currentHealth = maxHealth;
+        canMove = true;
+        isDead = false;
+        isAttacking = false;
+        gameObject.transform.position = new Vector2(0, 0);
         knockbackCount = 0;
         invincibilityCounter = 0;
     }
