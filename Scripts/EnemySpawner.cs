@@ -49,17 +49,23 @@ public class EnemySpawner : MonoBehaviour
     {
         if (other.tag == "Player")
         {
-            hasEntered = true;
-            StartCoroutine(SpawnRoutine());
-            //SpawnAgent();
-            zoneTrigger.enabled = false; //turn off the zone trigger so that the player can't touch the trigger and call the method again 
+            zoneTrigger.enabled = false; //turn off the zone trigger so that the player can't touch the trigger and call the method again
+            HandleSpawn();
         }
+    }
+
+    private void HandleSpawn()
+    {
+        if (hasEntered) return;
+
+        hasEntered = true;
+        StartCoroutine(SpawnRoutine());
     }
 
     //preliminary spawn method, no NavMesh magic.
     private IEnumerator SpawnRoutine()
     {
-        while (true) //replace "true" with a condition later that will stop the enemy spawn
+        while (hasEntered) //replace "true" with a condition later that will stop the enemy spawn
         {
             Vector2 spawnPosition = new Vector2(spawnX, spawnY); //determine spawn location
             GameObject newEnemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity); //instantiate enemy prefab
