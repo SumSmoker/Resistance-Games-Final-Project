@@ -5,7 +5,6 @@ public class EnemyHealth : MonoBehaviour
     [Header("Health Stats")]
     [SerializeField] private int maxHealth = 100;
     [SerializeField] private int currentHealth;
-    [SerializeField] private GameObject loot;
 
     private LevelManager theLevelManager;
     private float hitCooldown = 0f;
@@ -54,7 +53,6 @@ public class EnemyHealth : MonoBehaviour
     private void Die()
     {
         if (theLevelManager != null) theLevelManager.Addkills(1);
-        if (loot != null) Instantiate(loot, transform.position, Quaternion.identity);
         Destroy(gameObject);
     }
 }
