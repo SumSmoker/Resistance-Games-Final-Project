@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Rendering;
-//using UnityEngine.Rendering.Universal;
-using UnityEngine.Rendering.PostProcessing;
 
 
 //attach this script to the Main Camera that is a child of the Player Character
